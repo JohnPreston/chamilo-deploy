@@ -1,0 +1,25 @@
+galaxy_info:
+  author: John Preston [JMille]
+  description: Small role to deploy Chamilo LMS
+  company: EWS-Network
+
+  license: GPLv3
+
+  min_ansible_version: 1.9
+  platforms:
+  - name: EL
+    versions:
+    - 7
+  - name: Amazon
+    versions:
+    - all
+  - name: Ubuntu
+    versions:
+    - wily
+  - name: Debian
+    versions:
+    - wheezy
+
+galaxy_tags: []
+
+dependencies: []
