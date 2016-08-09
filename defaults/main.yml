@@ -1,2 +1,18 @@
 ---
 # defaults file for chamilo-deploy
+
+max_execution_time: 300
+max_input_time: 600
+memory_limit:  256M
+post_max_size: 128M
+upload_max_filesize: 128M
+short_open_tag: On
+date_timezone: 'ETC/UTC'
+
+chamilo_zip_url: https://github.com/chamilo/chamilo-lms/releases/download/v1.10.8/chamilo-lms-1.10.8.zip
+
+default_www_path: /var/www
+
+php_session_handler: redis
+redis_server_address: 127.0.0.1
+redis_server_port: 6379
