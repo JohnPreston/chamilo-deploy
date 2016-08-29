@@ -1,0 +1,122 @@
+---
+# For RH / CentOS
+
+- name: Install EPEL
+  yum: name=epel-release state=latest
+  become: yes
+  tags:
+  - packages
+
+- name: NGINX repo
+  template: src=nginx.repo.j2 dest=/etc/yum.repos.d/nginx.repo
+  become: yes
+  tags:
+  - packages
+
+- name: Install NGINX
+  yum: name=nginx state=latest
+  become: yes
+  tags:
+  - packages
+
+
+- name: Install PHP-FPM
+  yum: name="php-fpm" state=latest
+  become: yes
+  tags:
+  - packages
+
+- name: Install PHP extensions
+  yum: name="{{ item }}" state=latest
+  with_items:
+  - php-session
+  - php-mysqlnd
+  - php-zlib
+  - php-pcre
+  - php-xml
+  - php-json
+  - php-mcrypt
+  - php-mbstring
+  - php-gd
+  - php-intl
+  - php-curl
+  - php-ctype
+  - php-redis
+  become: yes
+  tags:
+  - packages
+
+- name: Install Unzip
+  yum: name=unzip state=present
+  become: yes
+  tags:
+  - packages
+
+- name: Edit php.ini settings
+  template: src="php.ini.j2" dest=/etc/php.ini
+  become: yes
+
+- name: Checks if the .zip file has already been downloaded
+  find: paths=/var/tmp  patterns="*.zip"
+  register: chamilo_already_there
+  tags:
+  - chamilo_find_zip
+
+- name: Debug already there
+  debug: msg="{{ chamilo_already_there }}"
+
+- name: Get Chamilo
+  get_url: url="{{ chamilo_zip_url }}" dest=/var/tmp/
+  tags:
+  - download
+  when:
+  - "{{ chamilo_already_there.matched == 0 }}"
+
+- name: Create var-www
+  file: state=directory owner=centos group=apache recurse=yes path="{{ default_www_path }}"
+  become: yes
+  when:
+  - "{{ chamilo_already_there.matched == 0 }}"
+
+- name: Find the chamilo zip file name
+  find: paths=/var/tmp  patterns="*.zip"
+  register: chamilo_zip_file
+  tags:
+  - chamilo_find_zip
+
+- name: Get the Chamilo folder basename
+  set_fact: chamilo_folder_basename="{{ ( chamilo_zip_file.files[0].path | basename ) | splitext | first }}"
+  tags:
+  - www_config
+
+# File too big to use the unarchive module
+- name: Unarchive the file
+  shell: unzip "{{ chamilo_zip_file.files[0].path }}" -d "{{ default_www_path }}"
+  tags:
+  - chamilo_unzip
+
+- name: Configure the paths access to the application - recurse
+  file: path="{{ item }}" owner=nginx group=root recurse=yes mode="u=rwx,g=rx,o=r"
+  with_items:
+  - "{{ default_www_path }}/{{ chamilo_folder_basename }}/app"
+  - "{{ default_www_path }}/{{ chamilo_folder_basename }}/web"
+  become: yes
+
+- name: Configure the paths access to the application - non-recurse
+  file: path="{{ item }}" owner=nginx group=apache mode="u=rwx,g=rx,o=r"
+  with_items:
+  - "{{ default_www_path }}/{{ chamilo_folder_basename }}/main"
+  - "{{ default_www_path }}/{{ chamilo_folder_basename }}/main/lang"
+  become: yes
+
+- name: Configure NGINX core config file
+  template: src=nginx.conf.j2 dest=/etc/nginx/nginx.conf
+  become: yes
+
+- name: Configure NGINX Chamilo file
+  template: src=chamilo-nginx.conf.j2 dest=/etc/nginx/conf.d/chamilo.conf
+  become: yes
+
+- name: Configure PHP FPM www config file
+  template: src=php-fpm.www.conf.j2 dest=/etc/php-fpm.d/www.conf
+  become: yes
